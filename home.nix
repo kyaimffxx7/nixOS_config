@@ -37,6 +37,7 @@
 
     # Tools
     devbox
+    distrobox
     anytype
     calibre
     jetbrains.pycharm-community

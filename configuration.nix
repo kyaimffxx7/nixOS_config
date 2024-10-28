@@ -92,13 +92,13 @@
   services.xserver.videoDrivers = [ "amdgpu" ];
 
   # Enable the KDE Plasma Desktop Environment.
-  services.xserver.displayManager.sddm.enable = true;
+  services.displayManager.sddm.enable = true;
   services.xserver.desktopManager.plasma5.enable = true;
 
   # Configure keymap in X11
-  services.xserver = {
+  services.xserver.xkb = {
     layout = "us";
-    xkbVariant = "";
+    variant = "";
   };
 
   # Enable CUPS to print documents.
@@ -164,7 +164,6 @@
     packages = with pkgs; [
       firefox
       kate
-    #  thunderbird
     ];
   };
 
@@ -224,7 +223,7 @@
     # Compilers & Interpreter
     gcc
     gnumake
-    
+    nodejs_22
 
     # Tools
     neofetch
