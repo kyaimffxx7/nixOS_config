@@ -41,9 +41,11 @@
     anytype
     calibre
     jetbrains.pycharm-community
-    sublime4
     brave
-
+    micro
+    davinci-resolve
+    gimp
+    krita
 
     # net
 

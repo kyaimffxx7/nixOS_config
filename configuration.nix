@@ -73,7 +73,8 @@
   
   # Input method setup
   i18n.inputMethod = {
-    enabled = "fcitx5";
+    type = "fcitx5";
+    enable = true;
     fcitx5.addons = with pkgs; [
       fcitx5-configtool
       fcitx5-chinese-addons
@@ -85,15 +86,15 @@
   fonts.packages = with pkgs; [
     (nerdfonts.override { fonts = [ "JetBrainsMono" ]; })
   ];
-
-
-  # Enable the X11 windowing system.
-  services.xserver.enable = true;
+  
+  # For AMDGPU
   services.xserver.videoDrivers = [ "amdgpu" ];
 
-  # Enable the KDE Plasma Desktop Environment.
+  # Enable KDE plasma 6.
+  services.xserver.enable = true;
   services.displayManager.sddm.enable = true;
-  services.xserver.desktopManager.plasma5.enable = true;
+  services.displayManager.sddm.wayland.enable = true;
+  services.desktopManager.plasma6.enable = true;
 
   # Configure keymap in X11
   services.xserver.xkb = {
@@ -163,7 +164,6 @@
     extraGroups = [ "networkmanager" "wheel" "docker" "libvirtd" "kvm" "disk" "input" ];
     packages = with pkgs; [
       firefox
-      kate
     ];
   };
 
@@ -213,7 +213,8 @@
     curl
     git
 
-    # Broswer
+    # File tool
+    kdePackages.filelight
 
     # Zsh plugins
     zsh-autosuggestions
