@@ -35,14 +35,21 @@
     #   echo "Hello, ${config.home.username}!"
     # '')
 
-    # Tools
+    # Virural Tools
     devbox
     distrobox
+
+    # Note & Read
     anytype
-    calibre
+
+    # IDE
     jetbrains.pycharm-community
+    
+    # Broswer
     brave
-    micro
+    arc-browser
+
+    # Video & Picture Editor
     davinci-resolve
     gimp
     krita
@@ -62,6 +69,9 @@
     userEmail = "mask2live@gmail.com";
     lfs.enable = true;
   };
+
+  # Setup emacs
+  # services.emacs.enable = true;
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
@@ -94,4 +104,10 @@
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
+
+  # Emacs custom ## doom-emacs is BROKEN
+  # programs.doom-emacs = {
+  #  enable = true;
+  #  emacsPackage = pkgs.emacs-gtk;
+  # };
 }

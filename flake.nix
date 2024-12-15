@@ -26,6 +26,9 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Doom-emacs ## BROKEN
+    # nix-doom-emacs.url = "github:nix-community/nix-doom-emacs";
   };
 
 

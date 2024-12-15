@@ -20,6 +20,12 @@
   };
   boot.loader.efi.canTouchEfiVariables = true;
 
+  # Enable IP forwarding
+  boot.kernel.sysctl = {
+    "net.ipv4.ip_forward" = 1;
+  #  "net.ipv6.conf.all.forwarding" = 1
+  };
+
   # AMDGPU setup
   ## move to hardware-configuration.nix
   # boot.initrd.kernelModules = [ "amdgpu" ];
@@ -75,6 +81,7 @@
   i18n.inputMethod = {
     type = "fcitx5";
     enable = true;
+    fcitx5.waylandFrontend = true;
     fcitx5.addons = with pkgs; [
       fcitx5-configtool
       fcitx5-chinese-addons
@@ -83,8 +90,9 @@
   };
 
   # Fonts setting
-  fonts.packages = with pkgs; [
-    (nerdfonts.override { fonts = [ "JetBrainsMono" ]; })
+  fonts.enableDefaultPackages = true;
+  fonts.packages = [
+    pkgs.nerd-fonts.jetbrains-mono
   ];
   
   # For AMDGPU
@@ -144,24 +152,18 @@
     # };
   };
 
-  # Binary packages execution
+  ###################################
+  # Binary packages execution Setup #
+  ###################################
   ## nix-ld
-  # programs.nix-ld.enable = true;
-  # environment.variables = {
-  #   NIX_LD_LIBRARY_PATH = lib.makeLibraryPath [
-  #     pkgs.stdenv.cc.cc
-  #     pkgs.openssl
-        # ...
-  #     ];
-  #   NIX_LD = lib.fileContents "${pkgs.stdenv.cc}/nix-support/dynamic-linker";
-  # };
+  programs.nix-ld.enable = true;
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.hisoka = {
     isNormalUser = true;
     description = "hisoka";
     shell = pkgs.zsh;
-    extraGroups = [ "networkmanager" "wheel" "docker" "libvirtd" "kvm" "disk" "input" ];
+    extraGroups = [ "networkmanager" "wheel" "libvirtd" "kvm" "disk" "input" ]; # if enable docker, add "docker"
     packages = with pkgs; [
       firefox
     ];
@@ -179,22 +181,48 @@
   nixpkgs.config.allowUnfree = true;
   # Allow Unsupported system
   nixpkgs.config.allowUnsupportedSystem = true;
-  
-  # Virtualisation
-  ## Docker setup
-  virtualisation.docker.enable = true;
-  virtualisation.docker.rootless = {
-    enable = true;
-    setSocketVariable = true;
-  };
 
-  ## Virtual machine setup
-  virtualisation.libvirtd.enable = true;
+  # Emacs requiremet
+  # nixpkgs.overlays = [
+  #   (import (builtins.fetchTarball https://github.com/nix-community/emacs-overlay/archive/master.tar.gz))
+  # ];
+
+  ######################
+  #   Virtualisation   #
+  ######################
+  # Docker setup
+  # virtualisation.docker.enable = true;
+  # virtualisation.docker.rootless = {
+  #   enable = true;
+  #   setSocketVariable = true;
+  # };
+
+  # Virtual machine setup
+  virtualisation.libvirtd = {
+  	enable = true;
+  	qemu = {
+  	  package = pkgs.qemu_kvm;
+  	  runAsRoot = true;
+  	  swtpm.enable = true;
+  	  ovmf = {
+  	    enable = true;
+  	    packages = [(pkgs.OVMF.override {
+  	      secureBoot = true;
+  	      tpmSupport = true;
+  	    }).fd];
+  	  };
+  	};
+  };
   programs.virt-manager.enable = true;
 
   
   # Flatpak
   services.flatpak.enable = true;
+  # Emacs
+  services.emacs.enable = true;
+  # Dae
+  services.dae.enable = true;
+  services.dae.configFile = "/usr/local/dae/config.dae";
 
   #########################
   # Packages Installation #
@@ -202,8 +230,192 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-    # Editors
+    ############################
+    # Bianry Environment Start #
+    ############################
+    (buildFHSUserEnv {
+      name = "fhs";
+      targetPkgs = pkgs: with pkgs; [
+        # Basic system libraries
+        glibc
+        gcc-unwrapped
+        zlib
+        glib
+
+	# NSS libraries
+	nss
+	nspr
+
+	# D-bus library
+	dbus
+
+	# ATK libraries
+	at-spi2-atk
+	atk
+
+	# CUPS library
+	cups
+
+	# DRM library
+	libdrm
+
+	# GTK3 library
+	gtk3
+
+	# Audio libraries
+        alsa-lib
+        pulseaudio
+
+	# Add Kerberos libraries
+        krb5
+        libkrb5
+
+	# Qt and dependencies
+        qt5.full
+        qt5.qtwayland
+        libsForQt5.qt5.qtbase
+        libsForQt5.qt5.qtwayland
+
+        # Common dependencies
+        openssl
+        libxml2
+        libxslt
+	expat
+	libsecret
+	libxkbcommon
+
+        # Graphics libraries
+        xorg.libX11
+        xorg.libXcursor
+        xorg.libXrandr
+        xorg.libXi
+	xorg.libXcomposite
+        xorg.libXdamage
+        xorg.libXext
+        xorg.libXfixes
+        xorg.libXrender
+        xorg.libXtst
+	xorg.xcbutilwm
+        xorg.xcbutilimage
+        xorg.xcbutilkeysyms
+        xorg.xcbutilrenderutil
+        wayland
+        
+	mesa
+	mesa.drivers
+        libGL
+	libGLU
+
+	# XCB library
+	xorg.libxcb
+
+        # Additional libraries that are often needed
+        ncurses5
+        stdenv.cc.cc.lib
+	pango
+	cairo
+	gdk-pixbuf
+
+        # Add any other libraries your specific binary might need
+      ];
+      multiPkgs = pkgs: with pkgs; [
+        # Packages that need to be available for both 32-bit and 64-bit
+        zlib
+	nss
+	dbus
+	at-spi2-atk
+	atk
+	cups
+	libdrm
+	gtk3
+	xorg.libXcomposite
+	xorg.libxcb
+        alsa-lib
+	krb5
+	libkrb5
+	qt5.full
+        qt5.qtwayland
+        libsForQt5.qt5.qtbase
+        libsForQt5.qt5.qtwayland
+        wayland
+      ];
+      profile = ''
+        export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath [
+          pkgs.qt5.full
+          pkgs.qt5.qtwayland
+          pkgs.libsForQt5.qt5.qtbase
+          pkgs.libsForQt5.qt5.qtwayland
+          pkgs.xorg.libxcb
+          pkgs.xorg.xcbutilwm
+          pkgs.xorg.xcbutilimage
+          pkgs.xorg.xcbutilkeysyms
+          pkgs.xorg.xcbutilrenderutil
+          pkgs.wayland
+          pkgs.libGL
+          pkgs.libGLU
+          pkgs.mesa
+          pkgs.mesa.drivers
+          pkgs.glibc
+          pkgs.nss
+          pkgs.nspr
+          pkgs.dbus
+          pkgs.at-spi2-atk
+          pkgs.atk
+          pkgs.cups
+          pkgs.libdrm
+          pkgs.gtk3
+          pkgs.xorg.libX11
+          pkgs.xorg.libXcursor
+          pkgs.xorg.libXrandr
+          pkgs.xorg.libXi
+          pkgs.xorg.libXcomposite
+          pkgs.xorg.libXdamage
+          pkgs.xorg.libXext
+          pkgs.xorg.libXfixes
+          pkgs.xorg.libXrender
+          pkgs.xorg.libXtst
+          pkgs.mesa
+          pkgs.libGL
+          pkgs.alsa-lib
+          pkgs.pulseaudio
+          pkgs.ncurses5
+          pkgs.stdenv.cc.cc.lib
+          pkgs.pango
+          pkgs.cairo
+          pkgs.gdk-pixbuf
+          pkgs.krb5
+          pkgs.libkrb5
+          pkgs.sqlite
+          pkgs.expat
+          pkgs.libsecret
+          pkgs.libxkbcommon
+	 # Add other necessary libraries here
+        ]}:$LD_LIBRARY_PATH
+	
+	export QT_PLUGIN_PATH=${pkgs.qt5.qtbase.outPath}/lib/qt-${pkgs.qt5.qtbase.version}/plugins
+        export QT_QPA_PLATFORM_PLUGIN_PATH=${pkgs.qt5.qtbase.outPath}/lib/qt-${pkgs.qt5.qtbase.version}/plugins/platforms
+        export XDG_DATA_DIRS=$XDG_DATA_DIRS:${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}
+        export QT_QPA_PLATFORM=xcb
+      '';
+      runScript = "bash";
+    })
+    ##########################
+    # Binary Environment End #
+    ##########################
+
+    # Remote
+    termius
+
+    ###########
+    # Editors #
+    ###########
     neovim
+    # Emacs
+    emacs
+    ripgrep
+    coreutils
+    fd
+    clang
 
     # Office
     libreoffice-still
@@ -212,6 +424,8 @@
     wget
     curl
     git
+    dnsmasq
+    ebtables
 
     # File tool
     kdePackages.filelight
@@ -229,7 +443,6 @@
     # Tools
     neofetch
     libsForQt5.yakuake
-    obs-studio
     tree
     file
     nmap
@@ -239,10 +452,10 @@
     autoPatchelfHook
     tmux
 
-    # Input method  ## Move to i18n.inputMethod
-  #  fcitx5
-  #  fcitx5-configtool
-  #  fcitx5-chinese-addons
+    # Video tools
+    kdePackages.kdenlive
+    shotcut
+    obs-studio
     
     # Communications
     telegram-desktop
@@ -257,26 +470,33 @@
     # NixOS home-manager
     home-manager
 
-    ## Binary packages executions
-    (let base = pkgs.appimageTools.defaultFhsEnvArgs; in
-      pkgs.buildFHSUserEnv (base // {
-      name = "fhs";
-      targetPkgs = pkgs: (
+    #####################################
+    ## Binary packages executions Setup #
+    #####################################
+    # (let base = pkgs.appimageTools.defaultFhsEnvArgs; in
+    #  pkgs.buildFHSUserEnv (base // {
+    #  name = "fhs";
+    #  targetPkgs = pkgs: (
         # pkgs.buildFHSUserEnv 只提供一个最小的 FHS 环境，缺少很多常用软件所必须的基础包
         # 所以直接使用它很可能会报错
         #
         # pkgs.appimageTools 提供了大多数程序常用的基础包，所以我们可以直接用它来补充
-        (base.targetPkgs pkgs) ++ [
-          pkgs.pkg-config
-          pkgs.ncurses
+    #    (base.targetPkgs pkgs) ++ [
+    #      pkgs.pkg-config
+    #      pkgs.ncurses
+    #      pkgs.fuse
           # 如果你的 FHS 程序还有其他依赖，把它们添加在这里
-        ]
-      );
-      profile = "export FHS=1";
-      runScript = "bash";
-      extraOutputsToInstall = ["dev"];
-    }))
+    #    ]
+    #  );
+    #  profile = "export FHS=1";
+    #  runScript = "bash";
+    #  extraOutputsToInstall = ["dev"];
+    #}))
   ];
+
+  environment.variables = {
+  	
+  };
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
